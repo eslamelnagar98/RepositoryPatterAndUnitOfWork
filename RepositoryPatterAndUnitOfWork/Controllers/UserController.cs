@@ -1,31 +1,38 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RepositoryPatterAndUnitOfWork.Core.IConfiguration;
 using RepositoryPatterAndUnitOfWork.Domain.Entities;
+using RepositoryPatterAndUnitOfWork.DTOs;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace RepositoryPatterAndUnitOfWork.Controllers
 {
-    [ApiController]
-    [Route("api/user")]
-    public class UserController : ControllerBase,IDisposable
+    public class UserController : BaseApiController,IDisposable
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<UserController> _logger;
+        private readonly IMapper _mapper;
 
-        public UserController(IUnitOfWork unitOfWork, ILogger<UserController> logger)
+        public UserController(IUnitOfWork unitOfWork, ILogger<UserController> logger,IMapper mapper)
         {
             _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper)); ;
         }
 
         [HttpGet]
         public async Task<ActionResult> GetAllUsers()
-            => Ok(await _unitOfWork.UserRepository.GetAll(filter: q => EF.Functions.Like(q.LastName,"%s%"),
-                                                          orderBy: q => q.OrderBy(s => s.LastName)));
+        {
+           var usersFromRepo= await _unitOfWork.UserRepository.GetAll(filter: q => EF.Functions.Like(q.LastName, "%s%"),
+                                                          orderBy: q => q.OrderBy(s => s.LastName));
+            if (usersFromRepo is null) return BadRequest();
+            return Ok(_mapper.Map<UserDto>(usersFromRepo));
+        }
+       
 
         [HttpPost]
         public async Task<IActionResult> CreateUser(User user)
@@ -35,30 +42,31 @@ namespace RepositoryPatterAndUnitOfWork.Controllers
                 user.Id = Guid.NewGuid();
                 await _unitOfWork.UserRepository.Add(user);
                 await _unitOfWork.CompleteAsync();
-                return CreatedAtAction("GetItem", new { user.Id }, user);
+                var userToReturn=_mapper.Map<UserDto>(user);
+                return CreatedAtAction("GetUser", new {id=user.Id }, userToReturn);
             }
 
             return new JsonResult("Something went wrong") { StatusCode = 500 };
         }
 
-        [HttpGet("{id}", Name = "GetItem")]
-        public async Task<IActionResult> GetItem(Guid id)
+        [HttpGet("{id}", Name = "GetUser")]
+        public async Task<IActionResult> GetUser(Guid id)
         {
-            var user = await _unitOfWork.UserRepository.GetByID(id);
-            if (user == null)
+            var userFromRepo = await _unitOfWork.UserRepository.GetByID(id);
+            if (userFromRepo == null)
                 return NotFound(); // 404 http status code 
 
-            return Ok(user);
+            return Ok(_mapper.Map<UserDto>(userFromRepo));
         }
 
-
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateItem(Guid id, User user)
+        public async Task<IActionResult> UpdateItem(Guid id, UserDto user)
         {
-            if (id != user.Id)
-                return BadRequest();
-
-            await _unitOfWork.UserRepository.Upsert(user);
+            if (user is null) return BadRequest();
+            var userFromRepo = await _unitOfWork.UserRepository.GetByID(id);
+            if (userFromRepo is null) return NotFound();
+            _mapper.Map(user, userFromRepo);
+            //await _unitOfWork.UserRepository.Upsert(user);
             await _unitOfWork.CompleteAsync();
 
             return NoContent();

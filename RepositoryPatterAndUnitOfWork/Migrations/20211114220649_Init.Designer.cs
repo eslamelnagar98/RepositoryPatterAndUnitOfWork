@@ -10,8 +10,8 @@ using RepositoryPatterAndUnitOfWork.Data;
 namespace RepositoryPatterAndUnitOfWork.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20211105122411_Intialize Repo Db")]
-    partial class IntializeRepoDb
+    [Migration("20211114220649_Init")]
+    partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

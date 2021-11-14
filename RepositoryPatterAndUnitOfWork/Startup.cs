@@ -33,6 +33,7 @@ namespace RepositoryPatterAndUnitOfWork
         {
 
             services.AddControllers();
+            services.AddAutoMapper(typeof(Startup));
             services.AddApplicationDbContext(Configuration);
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();

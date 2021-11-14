@@ -12,6 +12,14 @@ namespace RepositoryPatterAndUnitOfWork.Data
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         { }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<User>(U => {
+                U.Property(u=>u.Id).ValueGeneratedOnAdd();
+            });
+               
+        }
         public DbSet<User> Users { get; set; }
     }
 }
